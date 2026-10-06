@@ -66,7 +66,7 @@ export default function Discussion() {
 
   // Thread Reply State
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
-  const [replyGroup, setReplyGroup] = useState<GroupName>("Kelompok 4");
+  const [replyGroup, setReplyGroup] = useState<GroupName>("Kelompok 1");
   const [replyContent, setReplyContent] = useState<string>("");
   const [replyLoading, setReplyLoading] = useState<boolean>(false);
   const [isReplyGroupDropdownOpen, setIsReplyGroupDropdownOpen] = useState<boolean>(false);
@@ -764,6 +764,9 @@ export default function Discussion() {
                                 setReplyingToId(null);
                               } else {
                                 setReplyingToId(comment.id);
+                                if (!isVerifiedK4) {
+                                  setReplyGroup("Kelompok 1");
+                                }
                               }
                             }}
                             className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-600 dark:text-purple-300 hover:text-sky-700 dark:hover:text-purple-200 transition-all cursor-pointer"
