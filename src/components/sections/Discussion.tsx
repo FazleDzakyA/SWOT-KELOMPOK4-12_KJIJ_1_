@@ -786,40 +786,38 @@ export default function Discussion() {
                             exit={{ opacity: 0, height: 0 }}
                             className="pt-2 pl-3 border-l-2 border-sky-400 dark:border-purple-500 space-y-2"
                           >
-                            <div className="flex items-center justify-between text-xs">
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                               <span className="font-bold text-slate-700 dark:text-purple-300">
                                 Balas sebagai:
                               </span>
-                              <div className="flex gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (!isVerifiedK4) {
-                                      setPendingAction({ type: "reply", parentCommentId: comment.id });
-                                      setIsPinModalOpen(true);
-                                    } else {
-                                      setReplyGroup("Kelompok 4");
-                                    }
-                                  }}
-                                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border cursor-pointer ${
-                                    replyGroup === "Kelompok 4"
-                                      ? "bg-amber-100 text-amber-800 border-amber-400 dark:bg-amber-950 dark:text-amber-300"
-                                      : "bg-slate-100 text-slate-600 dark:bg-purple-950 dark:text-slate-400 border-transparent"
-                                  }`}
-                                >
-                                  👑 Kelompok 4 (Resmi)
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setReplyGroup("Kelompok 1")}
-                                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border cursor-pointer ${
-                                    replyGroup !== "Kelompok 4"
-                                      ? "bg-sky-100 text-sky-800 border-sky-300 dark:bg-blue-950 dark:text-sky-300"
-                                      : "bg-slate-100 text-slate-600 dark:bg-purple-950 dark:text-slate-400 border-transparent"
-                                  }`}
-                                >
-                                  👥 Kelompok Lain
-                                </button>
+                              <div className="flex flex-wrap gap-1">
+                                {AVAILABLE_GROUPS.map((g) => {
+                                  const isSelected = replyGroup === g;
+                                  const isK4 = g === "Kelompok 4";
+                                  return (
+                                    <button
+                                      key={g}
+                                      type="button"
+                                      onClick={() => {
+                                        if (isK4 && !isVerifiedK4) {
+                                          setPendingAction({ type: "reply", parentCommentId: comment.id });
+                                          setIsPinModalOpen(true);
+                                        } else {
+                                          setReplyGroup(g);
+                                        }
+                                      }}
+                                      className={`px-2 py-0.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+                                        isSelected
+                                          ? isK4
+                                            ? "bg-amber-100 text-amber-800 border-amber-400 dark:bg-amber-950 dark:text-amber-300 font-extrabold"
+                                            : "bg-sky-500 text-white border-sky-600 dark:bg-purple-600 dark:border-purple-500"
+                                          : "bg-slate-100 dark:bg-purple-950/60 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-purple-800/40 hover:border-sky-300"
+                                      }`}
+                                    >
+                                      {isK4 ? (isVerifiedK4 ? "👑 K4" : "👑 K4 🔑") : g}
+                                    </button>
+                                  );
+                                })}
                               </div>
                             </div>
 
