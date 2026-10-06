@@ -105,8 +105,10 @@ export interface DiscussionComment {
   id: string;
   group_name: string;
   content: string;
-  category?: "Ide Strategi" | "Tanya Materi" | "Review Kasus" | "Umum";
+  category?: "Ide Strategi" | "Tanya Materi" | "Review Kasus" | "Umum" | string;
   created_at: string;
+  parent_id?: string;
+  is_official?: boolean;
   is_demo?: boolean;
 }
 

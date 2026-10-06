@@ -74,7 +74,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { group_name, content } = body;
+    const { group_name, content, category, parent_id, is_official } = body;
 
     // Server-side validation
     if (!group_name || typeof group_name !== "string" || !group_name.trim()) {
@@ -110,6 +110,9 @@ export async function POST(request: Request) {
         id: `demo-${Date.now()}`,
         group_name: group_name.trim(),
         content: sanitizedContent,
+        category: category || "Umum",
+        parent_id: parent_id || null,
+        is_official: Boolean(is_official),
         created_at: new Date().toISOString(),
         is_demo: true,
       };
@@ -123,14 +126,17 @@ export async function POST(request: Request) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const insertPayload: any = {
+      group_name: group_name.trim(),
+      content: sanitizedContent,
+      category: category || "Umum",
+      parent_id: parent_id || null,
+      is_official: Boolean(is_official),
+    };
+
     const { data, error } = await supabase
       .from("comments")
-      .insert([
-        {
-          group_name: group_name.trim(),
-          content: sanitizedContent,
-        },
-      ])
+      .insert([insertPayload])
       .select("*")
       .single();
 

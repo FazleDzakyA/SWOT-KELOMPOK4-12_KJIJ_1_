@@ -17,6 +17,13 @@ import {
   ChevronDown,
   Tag,
   UserCheck,
+  Lock,
+  Crown,
+  CornerDownRight,
+  ShieldCheck,
+  KeyRound,
+  X,
+  Delete,
 } from "lucide-react";
 import {
   DiscussionComment,
@@ -45,6 +52,24 @@ export default function Discussion() {
     "connected" | "reconnecting" | "disconnected" | "demo"
   >(isSupabaseConfigured ? "connected" : "demo");
 
+  // Kelompok 4 Security PIN & Authentication State
+  const CORRECT_K4_PIN = "040404";
+  const [isVerifiedK4, setIsVerifiedK4] = useState<boolean>(false);
+  const [isPinModalOpen, setIsPinModalOpen] = useState<boolean>(false);
+  const [pinInput, setPinInput] = useState<string>("");
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<{
+    type: "selectGroup" | "reply";
+    groupName?: GroupName;
+    parentCommentId?: string;
+  } | null>(null);
+
+  // Thread Reply State
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyGroup, setReplyGroup] = useState<GroupName>("Kelompok 4");
+  const [replyContent, setReplyContent] = useState<string>("");
+  const [replyLoading, setReplyLoading] = useState<boolean>(false);
+
   const MAX_CHAR_LIMIT = 500;
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
@@ -53,6 +78,16 @@ export default function Discussion() {
     "Bagaimana siswa SMA/SMK dapat menangkal individualisme dan mempertahankan gotong royong?",
     "Kami sepakat bahwa bonus demografi Indonesia harus didukung akselerasi kualitas SDM...",
   ];
+
+  // Check saved session authentication for Kelompok 4
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedAuth = sessionStorage.getItem("k4_authenticated");
+      if (savedAuth === "true") {
+        setIsVerifiedK4(true);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     async function loadComments() {
@@ -115,26 +150,82 @@ export default function Discussion() {
     };
   }, []);
 
+  // Handle Group Selection with PIN protection for Kelompok 4
+  const handleSelectGroup = (group: GroupName) => {
+    if (group === "Kelompok 4" && !isVerifiedK4) {
+      setPendingAction({ type: "selectGroup", groupName: group });
+      setPinInput("");
+      setPinError(null);
+      setIsPinModalOpen(true);
+      return;
+    }
+    setSelectedGroup(group);
+  };
+
+  // PIN Keypad Handlers
+  const handlePinKeyPress = (digit: string) => {
+    if (pinInput.length >= 6) return;
+    const newPin = pinInput + digit;
+    setPinInput(newPin);
+    setPinError(null);
+
+    // Auto verify when 6 digits entered
+    if (newPin.length === 6) {
+      verifyPinCode(newPin);
+    }
+  };
+
+  const handlePinDelete = () => {
+    setPinInput((prev) => prev.slice(0, -1));
+    setPinError(null);
+  };
+
+  const handlePinClear = () => {
+    setPinInput("");
+    setPinError(null);
+  };
+
+  const verifyPinCode = (pinToTest: string) => {
+    if (pinToTest === CORRECT_K4_PIN) {
+      setIsVerifiedK4(true);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("k4_authenticated", "true");
+      }
+      setIsPinModalOpen(false);
+      setPinInput("");
+      setPinError(null);
+
+      if (pendingAction?.type === "selectGroup" && pendingAction.groupName) {
+        setSelectedGroup(pendingAction.groupName);
+      } else if (pendingAction?.type === "reply" && pendingAction.parentCommentId) {
+        setReplyingToId(pendingAction.parentCommentId);
+        setReplyGroup("Kelompok 4");
+      }
+      setPendingAction(null);
+
+      setStatusMessage({
+        type: "success",
+        text: "👑 Verifikasi Kelompok 4 Berhasil! Akses Penulis dibuka.",
+      });
+      setTimeout(() => setStatusMessage(null), 3000);
+    } else {
+      setPinError("PIN Kelompok 4 Salah! Coba lagi.");
+      setPinInput("");
+    }
+  };
+
+  // Main Form Submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatusMessage(null);
 
-    const trimmed = content.trim();
-    if (!trimmed) {
-      setStatusMessage({
-        type: "error",
-        text: "Isi komentar tidak boleh kosong atau hanya berisi spasi.",
-      });
+    if (selectedGroup === "Kelompok 4" && !isVerifiedK4) {
+      setPendingAction({ type: "selectGroup", groupName: "Kelompok 4" });
+      setIsPinModalOpen(true);
       return;
     }
 
-    if (trimmed.length > MAX_CHAR_LIMIT) {
-      setStatusMessage({
-        type: "error",
-        text: `Komentar tidak boleh melebihi ${MAX_CHAR_LIMIT} karakter.`,
-      });
-      return;
-    }
+    if (!content.trim()) return;
 
     setLoading(true);
 
@@ -144,8 +235,9 @@ export default function Discussion() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           group_name: selectedGroup,
-          content: trimmed,
+          content: content.trim(),
           category: selectedCategory,
+          is_official: selectedGroup === "Kelompok 4",
         }),
       });
 
@@ -156,13 +248,14 @@ export default function Discussion() {
       }
 
       if (json.data) {
-        const commentWithCategory = {
+        const commentWithDetails = {
           ...json.data,
           category: selectedCategory,
+          is_official: selectedGroup === "Kelompok 4",
         };
         setComments((prev) => {
-          if (prev.some((c) => c.id === commentWithCategory.id)) return prev;
-          return [commentWithCategory, ...prev];
+          if (prev.some((c) => c.id === commentWithDetails.id)) return prev;
+          return [commentWithDetails, ...prev];
         });
       }
 
@@ -185,6 +278,67 @@ export default function Discussion() {
     }
   };
 
+  // Reply Form Submit
+  const handleReplySubmit = async (parentId: string) => {
+    if (!replyContent.trim()) return;
+
+    if (replyGroup === "Kelompok 4" && !isVerifiedK4) {
+      setPendingAction({ type: "reply", parentCommentId: parentId });
+      setIsPinModalOpen(true);
+      return;
+    }
+
+    setReplyLoading(true);
+
+    try {
+      const res = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          group_name: replyGroup,
+          content: replyContent.trim(),
+          category: "Tanggapan Kelompok",
+          parent_id: parentId,
+          is_official: replyGroup === "Kelompok 4",
+        }),
+      });
+
+      const json = await res.json();
+
+      if (!json.success) {
+        throw new Error(json.error || "Gagal mengirim balasan.");
+      }
+
+      if (json.data) {
+        const newReply = {
+          ...json.data,
+          category: "Tanggapan Kelompok",
+          parent_id: parentId,
+          is_official: replyGroup === "Kelompok 4",
+        };
+        setComments((prev) => {
+          if (prev.some((c) => c.id === newReply.id)) return prev;
+          return [...prev, newReply];
+        });
+      }
+
+      setReplyContent("");
+      setReplyingToId(null);
+      setStatusMessage({
+        type: "success",
+        text: "Balasan berhasil dikirim!",
+      });
+      setTimeout(() => setStatusMessage(null), 3000);
+    } catch (err: any) {
+      setStatusMessage({
+        type: "error",
+        text: err.message || "Terjadi kesalahan saat membalas.",
+      });
+    } finally {
+      setReplyLoading(false);
+    }
+  };
+
   const getGroupBadgeColor = (group: string) => {
     switch (group) {
       case "Kelompok 1":
@@ -194,7 +348,7 @@ export default function Discussion() {
       case "Kelompok 3":
         return "bg-purple-50 text-purple-700 dark:bg-purple-950/80 dark:text-purple-300 border-purple-200 dark:border-purple-800";
       case "Kelompok 4":
-        return "bg-amber-50 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border-amber-200 dark:border-amber-800";
+        return "bg-amber-100 text-amber-800 dark:bg-amber-950/90 dark:text-amber-300 border-amber-300 dark:border-amber-700 font-extrabold shadow-2xs";
       case "Kelompok 5":
         return "bg-rose-50 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border-rose-200 dark:border-rose-800";
       case "Kelompok 6":
@@ -204,12 +358,15 @@ export default function Discussion() {
     }
   };
 
-  const filteredComments = comments.filter((c) => {
+  // Top-level comments (parent_id is null)
+  const topLevelComments = comments.filter((c) => !c.parent_id);
+
+  const filteredComments = topLevelComments.filter((c) => {
     if (filterCategory === "Semua") return true;
     return c.category === filterCategory;
   });
 
-  const sortedComments = [...filteredComments].sort((a, b) => {
+  const sortedTopLevelComments = [...filteredComments].sort((a, b) => {
     const timeA = new Date(a.created_at).getTime();
     const timeB = new Date(b.created_at).getTime();
     return sortOrder === "newest" ? timeB - timeA : timeA - timeB;
@@ -250,41 +407,29 @@ export default function Discussion() {
                 <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   <Wifi className="w-3.5 h-3.5" />
-                  <span>Realtime Live</span>
-                </div>
-              )}
-              {connStatus === "reconnecting" && (
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                  <span>Menghubungkan...</span>
-                </div>
-              )}
-              {connStatus === "disconnected" && (
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-bold">
-                  <WifiOff className="w-3.5 h-3.5" />
-                  <span>Terputus</span>
+                  <span>Terhubung ke Supabase Realtime</span>
                 </div>
               )}
               {connStatus === "demo" && (
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 dark:bg-purple-950/80 text-sky-800 dark:text-purple-300 border border-sky-200 dark:border-purple-800 text-xs font-bold">
-                  <Sparkles className="w-3.5 h-3.5 text-sky-500 dark:text-purple-400" />
-                  <span>Mode Demo (Simulasi Lokal)</span>
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Mode Simulasi Interaktif</span>
                 </div>
               )}
             </div>
 
-            {/* Filter & Sort */}
-            <div className="flex flex-wrap items-center gap-2.5">
-              <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                <Filter className="w-3.5 h-3.5" />
+            {/* Filter & Sort Controls */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-purple-950/60 p-1 rounded-xl border border-slate-200 dark:border-purple-800/40">
+                <Filter className="w-3.5 h-3.5 text-slate-400 ml-2" />
                 <select
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
-                  className="bg-white dark:bg-purple-950/80 px-3 py-1.5 rounded-full text-xs font-bold border border-slate-200 dark:border-purple-800 text-slate-800 dark:text-slate-200 shadow-2xs"
+                  className="bg-transparent text-xs font-bold text-slate-700 dark:text-slate-200 pr-2 py-1 outline-none cursor-pointer"
                 >
-                  <option value="Semua">Semua Kategori</option>
+                  <option value="Semua" className="dark:bg-slate-900">Semua Kategori</option>
                   {DISCUSSION_CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
+                    <option key={cat} value={cat} className="dark:bg-slate-900">
                       {cat}
                     </option>
                   ))}
@@ -292,14 +437,20 @@ export default function Discussion() {
               </div>
 
               <button
-                onClick={() =>
-                  setSortOrder(sortOrder === "newest" ? "oldest" : "newest")
-                }
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-purple-950/60 text-xs font-bold border border-slate-200 dark:border-purple-900/60 text-slate-800 dark:text-slate-200 cursor-pointer shadow-xs"
+                onClick={() => setSortOrder(sortOrder === "newest" ? "oldest" : "newest")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-purple-950/60 border border-slate-200 dark:border-purple-800/40 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-sky-600 dark:hover:text-purple-300 transition-all cursor-pointer"
               >
                 <ArrowUpDown className="w-3.5 h-3.5" />
                 <span>{sortOrder === "newest" ? "Terbaru" : "Terlama"}</span>
               </button>
+
+              {/* Status Verified Kelompok 4 Indicator */}
+              {isVerifiedK4 && (
+                <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-600 dark:text-amber-300 text-[11px] font-extrabold">
+                  <Crown className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Akses K4 Aktif</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -321,7 +472,7 @@ export default function Discussion() {
                 >
                   <span className="flex items-center gap-2">
                     <span className={`px-2 py-0.5 rounded-md text-xs border ${getGroupBadgeColor(selectedGroup)}`}>
-                      👥 {selectedGroup}
+                      {selectedGroup === "Kelompok 4" ? "👑 Kelompok 4 (Penulis)" : `👥 ${selectedGroup}`}
                     </span>
                   </span>
                   <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${isGroupDropdownOpen ? "rotate-180" : ""}`} />
@@ -339,11 +490,12 @@ export default function Discussion() {
                     >
                       {AVAILABLE_GROUPS.map((g) => {
                         const isSelected = g === selectedGroup;
+                        const isK4 = g === "Kelompok 4";
                         return (
                           <div
                             key={g}
                             onClick={() => {
-                              setSelectedGroup(g);
+                              handleSelectGroup(g);
                               setIsGroupDropdownOpen(false);
                             }}
                             className={`flex items-center justify-between p-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
@@ -354,7 +506,7 @@ export default function Discussion() {
                           >
                             <div className="flex items-center gap-2">
                               <span className={`px-2 py-0.5 rounded-md border text-[11px] ${getGroupBadgeColor(g)}`}>
-                                {g}
+                                {isK4 ? "👑 Kelompok 4 (Penulis - Terkunci 🔑)" : g}
                               </span>
                             </div>
                             {isSelected && <CheckCircle2 className="w-4 h-4 text-sky-500 dark:text-purple-400" />}
@@ -526,7 +678,7 @@ export default function Discussion() {
                 <span>Umpan Diskusi Masuk</span>
               </h3>
               <span className="text-xs text-slate-400">
-                {sortedComments.length} Komentar
+                {sortedTopLevelComments.length} Topik Diskusi
               </span>
             </div>
 
@@ -542,7 +694,7 @@ export default function Discussion() {
                   </div>
                 ))}
               </div>
-            ) : sortedComments.length === 0 ? (
+            ) : sortedTopLevelComments.length === 0 ? (
               <div className="p-6 text-center bg-slate-50 dark:bg-purple-950/20 rounded-xl border border-dashed border-slate-200 dark:border-purple-900/50 space-y-1">
                 <MessageSquare className="w-8 h-8 text-slate-300 dark:text-purple-600 mx-auto" />
                 <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -553,49 +705,203 @@ export default function Discussion() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1">
                 <AnimatePresence>
-                  {sortedComments.map((comment) => (
-                    <motion.div
-                      key={comment.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                      className="p-4 rounded-2xl bg-white dark:bg-[#150D33]/90 border border-slate-200/80 dark:border-purple-500/20 shadow-xs space-y-2"
-                    >
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${getGroupBadgeColor(
-                              comment.group_name
-                            )}`}
+                  {sortedTopLevelComments.map((comment) => {
+                    const childReplies = comments.filter((c) => c.parent_id === comment.id);
+                    const isReplyingThis = replyingToId === comment.id;
+
+                    return (
+                      <motion.div
+                        key={comment.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                        className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#150D33]/90 border border-slate-200/80 dark:border-purple-500/20 shadow-xs space-y-3"
+                      >
+                        {/* Parent Comment Header */}
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${getGroupBadgeColor(
+                                comment.group_name
+                              )}`}
+                            >
+                              {comment.group_name === "Kelompok 4" ? "👑 Kelompok 4 (Penulis)" : comment.group_name}
+                            </span>
+                            {comment.category && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-purple-950/60 text-slate-600 dark:text-purple-300 font-medium border border-slate-200 dark:border-purple-800/40">
+                                🏷️ {comment.category}
+                              </span>
+                            )}
+                            {comment.is_official && (
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 font-black uppercase border border-amber-500/30 flex items-center gap-1">
+                                <Crown className="w-2.5 h-2.5 text-amber-500" />
+                                Penulis Resmi
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium">
+                            <Clock className="w-3 h-3" />
+                            <span>{formatDate(comment.created_at)}</span>
+                          </div>
+                        </div>
+
+                        {/* Parent Comment Body */}
+                        <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
+                          {comment.content}
+                        </p>
+
+                        {/* Reply Toggle Action Bar */}
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-purple-950/80">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isReplyingThis) {
+                                setReplyingToId(null);
+                              } else {
+                                setReplyingToId(comment.id);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-600 dark:text-purple-300 hover:text-sky-700 dark:hover:text-purple-200 transition-all cursor-pointer"
                           >
-                            {comment.group_name}
-                          </span>
-                          {comment.category && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-purple-950/60 text-slate-600 dark:text-purple-300 font-medium border border-slate-200 dark:border-purple-800/40">
-                              🏷️ {comment.category}
-                            </span>
-                          )}
-                          {comment.is_demo && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-sky-50 dark:bg-purple-950 text-sky-700 dark:text-purple-300 font-bold uppercase">
-                              Contoh
+                            <CornerDownRight className="w-3.5 h-3.5" />
+                            <span>{isReplyingThis ? "Batal Balas" : "Balas Komentar Ini"}</span>
+                          </button>
+
+                          {childReplies.length > 0 && (
+                            <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                              💬 {childReplies.length} Tanggapan
                             </span>
                           )}
                         </div>
 
-                        <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium">
-                          <Clock className="w-3 h-3" />
-                          <span>{formatDate(comment.created_at)}</span>
-                        </div>
-                      </div>
+                        {/* Inline Reply Input Form */}
+                        {isReplyingThis && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="pt-2 pl-3 border-l-2 border-sky-400 dark:border-purple-500 space-y-2"
+                          >
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-slate-700 dark:text-purple-300">
+                                Balas sebagai:
+                              </span>
+                              <div className="flex gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!isVerifiedK4) {
+                                      setPendingAction({ type: "reply", parentCommentId: comment.id });
+                                      setIsPinModalOpen(true);
+                                    } else {
+                                      setReplyGroup("Kelompok 4");
+                                    }
+                                  }}
+                                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border cursor-pointer ${
+                                    replyGroup === "Kelompok 4"
+                                      ? "bg-amber-100 text-amber-800 border-amber-400 dark:bg-amber-950 dark:text-amber-300"
+                                      : "bg-slate-100 text-slate-600 dark:bg-purple-950 dark:text-slate-400 border-transparent"
+                                  }`}
+                                >
+                                  👑 Kelompok 4 (Resmi)
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setReplyGroup("Kelompok 1")}
+                                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border cursor-pointer ${
+                                    replyGroup !== "Kelompok 4"
+                                      ? "bg-sky-100 text-sky-800 border-sky-300 dark:bg-blue-950 dark:text-sky-300"
+                                      : "bg-slate-100 text-slate-600 dark:bg-purple-950 dark:text-slate-400 border-transparent"
+                                  }`}
+                                >
+                                  👥 Kelompok Lain
+                                </button>
+                              </div>
+                            </div>
 
-                      <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
-                        {comment.content}
-                      </p>
-                    </motion.div>
-                  ))}
+                            <textarea
+                              value={replyContent}
+                              onChange={(e) => setReplyContent(e.target.value)}
+                              rows={2}
+                              maxLength={MAX_CHAR_LIMIT}
+                              placeholder={`Tuliskan tanggapan balasan dari ${replyGroup}...`}
+                              className="w-full glass-input p-2.5 rounded-xl text-xs resize-none"
+                            />
+
+                            <div className="flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setReplyingToId(null)}
+                                className="px-3 py-1 rounded-full text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-purple-950 cursor-pointer"
+                              >
+                                Batal
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleReplySubmit(comment.id)}
+                                disabled={replyLoading || !replyContent.trim()}
+                                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-sky-500 hover:bg-sky-600 dark:bg-purple-600 dark:hover:bg-purple-700 text-white font-bold text-xs disabled:opacity-50 cursor-pointer"
+                              >
+                                {replyLoading ? (
+                                  <span>Mengirim...</span>
+                                ) : (
+                                  <>
+                                    <Send className="w-3 h-3" />
+                                    <span>Kirim Balasan</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {/* Nested Replies Stream */}
+                        {childReplies.length > 0 && (
+                          <div className="pt-2 pl-3 sm:pl-5 border-l-2 border-amber-400/40 dark:border-purple-800/60 space-y-2.5">
+                            {childReplies.map((reply) => (
+                              <div
+                                key={reply.id}
+                                className={`p-3 rounded-xl space-y-1.5 text-xs ${
+                                  reply.is_official || reply.group_name === "Kelompok 4"
+                                    ? "bg-amber-500/10 border border-amber-500/30 dark:bg-amber-950/40"
+                                    : "bg-slate-50 dark:bg-purple-950/50 border border-slate-200/60 dark:border-purple-900/30"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-1.5">
+                                    <span
+                                      className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${getGroupBadgeColor(
+                                        reply.group_name
+                                      )}`}
+                                    >
+                                      {reply.group_name === "Kelompok 4"
+                                        ? "👑 Kelompok 4 (Penulis)"
+                                        : reply.group_name}
+                                    </span>
+                                    {(reply.is_official || reply.group_name === "Kelompok 4") && (
+                                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500 text-white font-black uppercase shadow-2xs">
+                                        Jawaban Resmi
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[9px] text-slate-400">
+                                    {formatDate(reply.created_at)}
+                                  </span>
+                                </div>
+                                <p className="text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                                  {reply.content}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
                 </AnimatePresence>
                 <div ref={commentsEndRef} />
               </div>
@@ -603,6 +909,131 @@ export default function Discussion() {
           </div>
         </div>
       </div>
+
+      {/* 🔒 PHONE KEYPAD PIN MODAL FOR KELOMPOK 4 VERIFICATION */}
+      <AnimatePresence>
+        {isPinModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-sm rounded-3xl bg-white/95 dark:bg-[#120826]/95 backdrop-blur-2xl border border-amber-500/30 shadow-2xl p-6 space-y-6 text-center relative overflow-hidden"
+            >
+              {/* Close Modal Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPinModalOpen(false);
+                  setPendingAction(null);
+                  setPinInput("");
+                  setPinError(null);
+                }}
+                className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-100 dark:bg-purple-950 text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* Modal Header */}
+              <div className="space-y-2 pt-2">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white mx-auto flex items-center justify-center shadow-lg shadow-amber-500/30">
+                  <KeyRound className="w-7 h-7" />
+                </div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                  Otentikasi Kelompok 4
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-300">
+                  Masukkan 6-digit PIN rahasia pemilik untuk mendapatkan akses 👑 Penulis Resmi:
+                </p>
+              </div>
+
+              {/* 6 PIN Indicator Dots */}
+              <div className="flex justify-center gap-3 py-2">
+                {[0, 1, 2, 3, 4, 5].map((idx) => {
+                  const isFilled = pinInput.length > idx;
+                  return (
+                    <motion.div
+                      key={idx}
+                      animate={isFilled ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+                      transition={{ duration: 0.15 }}
+                      className={`w-4 h-4 rounded-full border-2 transition-all ${
+                        isFilled
+                          ? "bg-amber-500 border-amber-500 shadow-md shadow-amber-500/50"
+                          : "border-slate-300 dark:border-purple-800 bg-transparent"
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* PIN Error Alert */}
+              {pinError && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold"
+                >
+                  {pinError}
+                </motion.div>
+              )}
+
+              {/* 3x4 Phone Keypad */}
+              <div className="grid grid-cols-3 gap-3 max-w-[240px] mx-auto pt-1">
+                {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => handlePinKeyPress(num)}
+                    className="w-16 h-16 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-purple-950/80 dark:hover:bg-purple-900 text-slate-900 dark:text-white font-extrabold text-xl flex items-center justify-center border border-slate-200/80 dark:border-purple-800/60 shadow-xs cursor-pointer active:scale-90 transition-transform"
+                  >
+                    {num}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={handlePinClear}
+                  className="w-16 h-16 rounded-full bg-slate-100 dark:bg-purple-950/40 text-slate-400 hover:text-slate-700 dark:hover:text-white font-bold text-xs flex items-center justify-center border border-transparent cursor-pointer active:scale-90"
+                >
+                  RESET
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handlePinKeyPress("0")}
+                  className="w-16 h-16 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-purple-950/80 dark:hover:bg-purple-900 text-slate-900 dark:text-white font-extrabold text-xl flex items-center justify-center border border-slate-200/80 dark:border-purple-800/60 shadow-xs cursor-pointer active:scale-90 transition-transform"
+                >
+                  0
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePinDelete}
+                  className="w-16 h-16 rounded-full bg-slate-100 dark:bg-purple-950/40 text-slate-500 dark:text-purple-300 font-bold flex items-center justify-center border border-transparent cursor-pointer active:scale-90"
+                >
+                  <Delete className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPinModalOpen(false);
+                    setPendingAction(null);
+                    setPinInput("");
+                    setPinError(null);
+                  }}
+                  className="text-xs font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  Batal &amp; Kembali ke Diskusi Umumm
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
