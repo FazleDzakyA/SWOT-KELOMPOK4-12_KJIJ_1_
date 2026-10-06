@@ -80,14 +80,9 @@ export default function Discussion() {
     "Kami sepakat bahwa bonus demografi Indonesia harus didukung akselerasi kualitas SDM...",
   ];
 
-  // Check saved session authentication for Kelompok 4
+  // Keep Kelompok 4 locked by default until PIN 040404 is entered
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedAuth = sessionStorage.getItem("k4_authenticated");
-      if (savedAuth === "true") {
-        setIsVerifiedK4(true);
-      }
-    }
+    setIsVerifiedK4(false);
   }, []);
 
   useEffect(() => {
@@ -445,11 +440,29 @@ export default function Discussion() {
                 <span>{sortOrder === "newest" ? "Terbaru" : "Terlama"}</span>
               </button>
 
-              {/* Status Verified Kelompok 4 Indicator */}
+              {/* Status Verified Kelompok 4 Indicator & Lock Button */}
               {isVerifiedK4 && (
-                <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-600 dark:text-amber-300 text-[11px] font-extrabold">
-                  <Crown className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Akses K4 Aktif</span>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-600 dark:text-amber-300 text-[11px] font-extrabold">
+                    <Crown className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Akses K4 Aktif</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsVerifiedK4(false);
+                      setSelectedGroup("Kelompok 1");
+                      setReplyGroup("Kelompok 1");
+                      setStatusMessage({
+                        type: "success",
+                        text: "🔒 Akses Kelompok 4 telah dikunci kembali.",
+                      });
+                      setTimeout(() => setStatusMessage(null), 3000);
+                    }}
+                    className="px-2 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:hover:bg-rose-900 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-[10px] font-bold cursor-pointer transition-all"
+                  >
+                    Kunci PIN 🔒
+                  </button>
                 </div>
               )}
             </div>
