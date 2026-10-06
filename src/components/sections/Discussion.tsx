@@ -69,6 +69,7 @@ export default function Discussion() {
   const [replyGroup, setReplyGroup] = useState<GroupName>("Kelompok 4");
   const [replyContent, setReplyContent] = useState<string>("");
   const [replyLoading, setReplyLoading] = useState<boolean>(false);
+  const [isReplyGroupDropdownOpen, setIsReplyGroupDropdownOpen] = useState<boolean>(false);
 
   const MAX_CHAR_LIMIT = 500;
   const commentsEndRef = useRef<HTMLDivElement>(null);
@@ -786,38 +787,66 @@ export default function Discussion() {
                             exit={{ opacity: 0, height: 0 }}
                             className="pt-2 pl-3 border-l-2 border-sky-400 dark:border-purple-500 space-y-2"
                           >
-                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <div className="flex items-center justify-between gap-2 text-xs relative">
                               <span className="font-bold text-slate-700 dark:text-purple-300">
-                                Balas sebagai:
+                                Identitas Balas:
                               </span>
-                              <div className="flex flex-wrap gap-1">
-                                {AVAILABLE_GROUPS.map((g) => {
-                                  const isSelected = replyGroup === g;
-                                  const isK4 = g === "Kelompok 4";
-                                  return (
-                                    <button
-                                      key={g}
-                                      type="button"
-                                      onClick={() => {
-                                        if (isK4 && !isVerifiedK4) {
-                                          setPendingAction({ type: "reply", parentCommentId: comment.id });
-                                          setIsPinModalOpen(true);
-                                        } else {
-                                          setReplyGroup(g);
-                                        }
-                                      }}
-                                      className={`px-2 py-0.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
-                                        isSelected
-                                          ? isK4
-                                            ? "bg-amber-100 text-amber-800 border-amber-400 dark:bg-amber-950 dark:text-amber-300 font-extrabold"
-                                            : "bg-sky-500 text-white border-sky-600 dark:bg-purple-600 dark:border-purple-500"
-                                          : "bg-slate-100 dark:bg-purple-950/60 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-purple-800/40 hover:border-sky-300"
-                                      }`}
+
+                              {/* Custom Dropdown Selector for Reply Group */}
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  onClick={() => setIsReplyGroupDropdownOpen(!isReplyGroupDropdownOpen)}
+                                  className="flex items-center gap-1.5 px-3 py-1 rounded-xl glass-input text-xs font-bold text-slate-900 dark:text-white cursor-pointer shadow-2xs border border-slate-200 dark:border-purple-800"
+                                >
+                                  <span className={`px-2 py-0.5 rounded-md text-[11px] border ${getGroupBadgeColor(replyGroup)}`}>
+                                    {replyGroup === "Kelompok 4"
+                                      ? (isVerifiedK4 ? "👑 Kelompok 4 (Penulis)" : "👑 Kelompok 4 (PIN 🔑)")
+                                      : `👥 ${replyGroup}`}
+                                  </span>
+                                  <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform ${isReplyGroupDropdownOpen ? "rotate-180" : ""}`} />
+                                </button>
+
+                                <AnimatePresence>
+                                  {isReplyGroupDropdownOpen && (
+                                    <motion.div
+                                      initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                                      exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                                      transition={{ duration: 0.15 }}
+                                      className="absolute right-0 top-full mt-1.5 z-40 p-1.5 rounded-xl bg-white/95 dark:bg-[#120926]/95 backdrop-blur-2xl border border-slate-200 dark:border-purple-800 shadow-2xl space-y-1 w-60"
                                     >
-                                      {isK4 ? (isVerifiedK4 ? "👑 K4" : "👑 K4 🔑") : g}
-                                    </button>
-                                  );
-                                })}
+                                      {AVAILABLE_GROUPS.map((g) => {
+                                        const isSelected = replyGroup === g;
+                                        const isK4 = g === "Kelompok 4";
+                                        return (
+                                          <div
+                                            key={g}
+                                            onClick={() => {
+                                              if (isK4 && !isVerifiedK4) {
+                                                setPendingAction({ type: "reply", parentCommentId: comment.id });
+                                                setIsPinModalOpen(true);
+                                              } else {
+                                                setReplyGroup(g);
+                                              }
+                                              setIsReplyGroupDropdownOpen(false);
+                                            }}
+                                            className={`flex items-center justify-between p-2 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                                              isSelected
+                                                ? "bg-sky-50 dark:bg-purple-900/60 text-sky-600 dark:text-purple-300 border border-sky-200 dark:border-purple-700"
+                                                : "hover:bg-slate-50 dark:hover:bg-purple-950/40 text-slate-700 dark:text-slate-200"
+                                            }`}
+                                          >
+                                            <span className={`px-2 py-0.5 rounded-md border text-[11px] ${getGroupBadgeColor(g)}`}>
+                                              {isK4 ? (isVerifiedK4 ? "👑 Kelompok 4 (Penulis)" : "👑 Kelompok 4 (PIN 🔑)") : g}
+                                            </span>
+                                            {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-sky-500 dark:text-purple-400" />}
+                                          </div>
+                                        );
+                                      })}
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
                               </div>
                             </div>
 
