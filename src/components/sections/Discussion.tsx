@@ -393,9 +393,9 @@ export default function Discussion() {
         {/* Discussion Card Container */}
         <div className="swot-card p-6 sm:p-8 space-y-6">
           {/* Status Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-purple-900/40">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-purple-900/40">
             {/* Realtime Status Indicator */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold text-slate-500 dark:text-purple-300 uppercase tracking-wider">
                 Status Koneksi:
               </span>
@@ -403,25 +403,26 @@ export default function Discussion() {
                 <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   <Wifi className="w-3.5 h-3.5" />
-                  <span>Terhubung ke Supabase Realtime</span>
+                  <span className="hidden xs:inline">Terhubung ke Supabase Realtime</span>
+                  <span className="xs:hidden">Supabase Realtime</span>
                 </div>
               )}
               {connStatus === "demo" && (
                 <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold">
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Mode Simulasi Interaktif</span>
+                  <span>Mode Simulasi</span>
                 </div>
               )}
             </div>
 
             {/* Filter & Sort Controls */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-purple-950/60 p-1 rounded-xl border border-slate-200 dark:border-purple-800/40">
-                <Filter className="w-3.5 h-3.5 text-slate-400 ml-2" />
+                <Filter className="w-3.5 h-3.5 text-slate-400 ml-1.5" />
                 <select
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
-                  className="bg-transparent text-xs font-bold text-slate-700 dark:text-slate-200 pr-2 py-1 outline-none cursor-pointer"
+                  className="bg-transparent text-xs font-bold text-slate-700 dark:text-slate-200 pr-2 py-1 outline-none cursor-pointer max-w-[140px] truncate"
                 >
                   <option value="Semua" className="dark:bg-slate-900">Semua Kategori</option>
                   {DISCUSSION_CATEGORIES.map((cat) => (
