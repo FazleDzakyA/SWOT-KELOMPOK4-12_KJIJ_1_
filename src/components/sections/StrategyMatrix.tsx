@@ -75,10 +75,10 @@ export default function StrategyMatrix() {
 
         {/* Tab Selection */}
         <div className="flex justify-center">
-          <div className="bg-white/80 dark:bg-purple-950/60 p-1.5 rounded-full border border-slate-200 dark:border-purple-800/60 flex flex-wrap gap-1.5 shadow-xs">
+          <div className="bg-white/80 dark:bg-purple-950/60 p-1.5 rounded-xl border border-slate-200 dark:border-purple-800/60 flex flex-wrap gap-1.5 shadow-xs">
             <button
               onClick={() => setActiveTab("kelemahan")}
-              className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 activeTab === "kelemahan"
                   ? "bg-rose-600 text-white shadow-xs"
                   : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
@@ -90,7 +90,7 @@ export default function StrategyMatrix() {
 
             <button
               onClick={() => setActiveTab("tantangan")}
-              className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 activeTab === "tantangan"
                   ? "bg-purple-600 text-white shadow-xs"
                   : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
@@ -102,7 +102,7 @@ export default function StrategyMatrix() {
 
             <button
               onClick={() => setActiveTab("tabel")}
-              className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 activeTab === "tabel"
                   ? "bg-amber-600 text-white shadow-xs"
                   : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"

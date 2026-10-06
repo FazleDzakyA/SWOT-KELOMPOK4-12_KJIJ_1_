@@ -69,10 +69,10 @@ export default function Factors() {
 
         {/* Tab Selection */}
         <div className="flex justify-center">
-          <div className="bg-white/80 dark:bg-purple-950/60 p-1.5 rounded-full border border-slate-200 dark:border-purple-800/60 flex flex-wrap gap-1.5 shadow-xs">
+          <div className="bg-white/80 dark:bg-purple-950/60 p-1.5 rounded-xl border border-slate-200 dark:border-purple-800/60 flex flex-wrap gap-1.5 shadow-xs">
             <button
               onClick={() => setActiveTab("kekuatan")}
-              className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 activeTab === "kekuatan"
                   ? "bg-blue-600 text-white shadow-xs"
                   : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
@@ -84,7 +84,7 @@ export default function Factors() {
 
             <button
               onClick={() => setActiveTab("peluang")}
-              className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 activeTab === "peluang"
                   ? "bg-emerald-600 text-white shadow-xs"
                   : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"

@@ -95,14 +95,14 @@ export default function Process() {
 
           {/* Sila Tabs */}
           <div className="flex justify-center overflow-x-auto pb-2 no-scrollbar">
-            <div className="flex items-center gap-2 p-1.5 rounded-full bg-white/80 dark:bg-purple-950/60 border border-slate-200 dark:border-purple-800/60 shadow-xs min-w-max">
+            <div className="flex items-center gap-2 p-1.5 rounded-xl bg-white/80 dark:bg-purple-950/60 border border-slate-200 dark:border-purple-800/60 shadow-xs min-w-max">
               {SILA_PANCASILA_LIST.map((sila) => {
                 const isActive = sila.number === activeSila;
                 return (
                   <button
                     key={sila.number}
                     onClick={() => setActiveSila(sila.number)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold transition-all cursor-pointer ${
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                       isActive
                         ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md scale-105"
                         : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
