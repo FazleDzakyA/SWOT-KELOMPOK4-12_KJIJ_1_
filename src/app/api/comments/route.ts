@@ -60,7 +60,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      data: data && data.length > 0 ? data : INITIAL_DEMO_COMMENTS,
+      data: data ?? [],
       isDemo: false,
     });
   } catch (err: any) {
