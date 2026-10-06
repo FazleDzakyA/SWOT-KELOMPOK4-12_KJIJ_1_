@@ -26,6 +26,7 @@ export interface SilaPancasila {
   description: string;
   globalExamples: string[];
   iconName: string;
+  imagePath?: string;
   color: string;
 }
 
@@ -478,6 +479,7 @@ export const SILA_PANCASILA_LIST: SilaPancasila[] = [
       "Tidak memaksakan kehendak atau keyakinan agama kepada pihak lain"
     ],
     iconName: "Sun",
+    imagePath: "/images/sila/sila1.png",
     color: "from-amber-400 to-yellow-600"
   },
   {
@@ -491,6 +493,7 @@ export const SILA_PANCASILA_LIST: SilaPancasila[] = [
       "Menghormati kesetaraan derajat sesama warga dunia"
     ],
     iconName: "Heart",
+    imagePath: "/images/sila/sila2.png",
     color: "from-rose-500 to-pink-600"
   },
   {
@@ -504,6 +507,7 @@ export const SILA_PANCASILA_LIST: SilaPancasila[] = [
       "Menolak narasi pengadudombaan yang merusak kedaulatan bangsa"
     ],
     iconName: "Shield",
+    imagePath: "/images/sila/sila3.png",
     color: "from-blue-500 to-indigo-600"
   },
   {
@@ -517,6 +521,7 @@ export const SILA_PANCASILA_LIST: SilaPancasila[] = [
       "Bersikap demokratis dan bertanggung jawab dalam pergaulan dunia"
     ],
     iconName: "UserCheck",
+    imagePath: "/images/sila/sila4.png",
     color: "from-purple-500 to-violet-600"
   },
   {
@@ -530,6 +535,7 @@ export const SILA_PANCASILA_LIST: SilaPancasila[] = [
       "Mendorong pemerataan akses pendidikan dan ekonomi bagi masyarakat berpendapatan rendah"
     ],
     iconName: "Scale",
+    imagePath: "/images/sila/sila5.png",
     color: "from-emerald-500 to-teal-600"
   }
 ];

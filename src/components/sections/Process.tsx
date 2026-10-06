@@ -102,13 +102,21 @@ export default function Process() {
                   <button
                     key={sila.number}
                     onClick={() => setActiveSila(sila.number)}
-                    className={`flex items-center justify-center py-2.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer w-full ${
+                    className={`flex items-center justify-center gap-1.5 py-2.5 px-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer w-full ${
                       isActive
                         ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
                         : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-purple-900/50 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
-                    <span>{sila.sila}</span>
+                    {sila.imagePath && (
+                      <img
+                        src={sila.imagePath}
+                        alt=""
+                        className="w-4 h-4 object-contain shrink-0 filter drop-shadow-xs"
+                      />
+                    )}
+                    <span className="hidden sm:inline">{sila.sila}</span>
+                    <span className="sm:hidden">{sila.number}</span>
                   </button>
                 );
               })}
@@ -124,8 +132,16 @@ export default function Process() {
             className="swot-card p-6 sm:p-9 max-w-4xl mx-auto space-y-6"
           >
             <div className="flex items-center gap-4 pb-4 border-b border-slate-200/80 dark:border-purple-800/60">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-purple-950 flex items-center justify-center border border-slate-200 dark:border-purple-800 shrink-0">
-                {renderIcon(selectedSilaData.iconName)}
+              <div className="w-14 h-14 rounded-2xl bg-white dark:bg-purple-950/90 flex items-center justify-center border border-slate-200 dark:border-purple-800 shrink-0 p-2 shadow-xs">
+                {selectedSilaData.imagePath ? (
+                  <img
+                    src={selectedSilaData.imagePath}
+                    alt={selectedSilaData.title}
+                    className="w-full h-full object-contain filter drop-shadow-xs"
+                  />
+                ) : (
+                  renderIcon(selectedSilaData.iconName)
+                )}
               </div>
               <div>
                 <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-blue-500/10 dark:bg-purple-500/20 text-blue-600 dark:text-purple-300 border border-blue-500/20 dark:border-purple-500/30">
