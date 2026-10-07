@@ -1220,7 +1220,7 @@ export default function Discussion() {
 
                     <button
                       type="button"
-                      onClick={() => handlePinDelete}
+                      onClick={handlePinDelete}
                       className="w-16 h-16 rounded-full bg-slate-100 dark:bg-purple-950/40 text-slate-500 dark:text-purple-300 font-bold flex items-center justify-center border border-transparent cursor-pointer active:scale-90"
                     >
                       <Delete className="w-5 h-5" />
