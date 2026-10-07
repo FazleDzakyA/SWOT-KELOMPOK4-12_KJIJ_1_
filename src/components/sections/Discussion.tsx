@@ -51,7 +51,7 @@ export default function Discussion() {
 
   // Security PINs & Authentication State
   const CORRECT_K4_PIN = "040404";
-  const CORRECT_GURU_PIN = "Benar";
+  const CORRECT_GURU_PIN = "101010";
 
   const [isVerifiedK4, setIsVerifiedK4] = useState<boolean>(false);
   const [isVerifiedGuru, setIsVerifiedGuru] = useState<boolean>(false);
