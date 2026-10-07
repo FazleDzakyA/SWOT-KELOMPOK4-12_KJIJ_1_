@@ -7,7 +7,6 @@ import {
   Send,
   Users,
   Wifi,
-  WifiOff,
   AlertCircle,
   CheckCircle2,
   Clock,
@@ -15,15 +14,13 @@ import {
   ArrowUpDown,
   Filter,
   ChevronDown,
-  Tag,
-  UserCheck,
-  Lock,
   Crown,
   CornerDownRight,
-  ShieldCheck,
   KeyRound,
   X,
   Delete,
+  GraduationCap,
+  UserCheck,
 } from "lucide-react";
 import {
   DiscussionComment,
@@ -36,7 +33,7 @@ import { formatDate } from "@/lib/utils";
 
 export default function Discussion() {
   const [comments, setComments] = useState<DiscussionComment[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<GroupName>("Kelompok 1");
+  const [selectedGroup, setSelectedGroup] = useState<string>("Kelompok 1");
   const [selectedCategory, setSelectedCategory] = useState<string>("Ide Strategi");
   const [filterCategory, setFilterCategory] = useState<string>("Semua");
   const [content, setContent] = useState("");
@@ -52,21 +49,31 @@ export default function Discussion() {
     "connected" | "reconnecting" | "disconnected" | "demo"
   >(isSupabaseConfigured ? "connected" : "demo");
 
-  // Kelompok 4 Security PIN & Authentication State
+  // Security PINs & Authentication State
   const CORRECT_K4_PIN = "040404";
+  const CORRECT_GURU_PIN = "010101";
+
   const [isVerifiedK4, setIsVerifiedK4] = useState<boolean>(false);
+  const [isVerifiedGuru, setIsVerifiedGuru] = useState<boolean>(false);
+  const [guruName, setGuruName] = useState<string>("");
+
   const [isPinModalOpen, setIsPinModalOpen] = useState<boolean>(false);
+  const [targetRoleForPin, setTargetRoleForPin] = useState<"K4" | "Guru">("K4");
+  const [isGuruNameStep, setIsGuruNameStep] = useState<boolean>(false);
+  const [tempGuruName, setTempGuruName] = useState<string>("");
+
   const [pinInput, setPinInput] = useState<string>("");
   const [pinError, setPinError] = useState<string | null>(null);
+
   const [pendingAction, setPendingAction] = useState<{
     type: "selectGroup" | "reply";
-    groupName?: GroupName;
+    groupName?: string;
     parentCommentId?: string;
   } | null>(null);
 
   // Thread Reply State
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
-  const [replyGroup, setReplyGroup] = useState<GroupName>("Kelompok 1");
+  const [replyGroup, setReplyGroup] = useState<string>("Kelompok 1");
   const [replyContent, setReplyContent] = useState<string>("");
   const [replyLoading, setReplyLoading] = useState<boolean>(false);
   const [isReplyGroupDropdownOpen, setIsReplyGroupDropdownOpen] = useState<boolean>(false);
@@ -80,9 +87,11 @@ export default function Discussion() {
     "Kami sepakat bahwa bonus demografi Indonesia harus didukung akselerasi kualitas SDM...",
   ];
 
-  // Keep Kelompok 4 locked by default until PIN 040404 is entered
+  // Reset auth on load
   useEffect(() => {
     setIsVerifiedK4(false);
+    setIsVerifiedGuru(false);
+    setGuruName("");
   }, []);
 
   useEffect(() => {
@@ -146,15 +155,34 @@ export default function Discussion() {
     };
   }, []);
 
-  // Handle Group Selection with PIN protection for Kelompok 4
-  const handleSelectGroup = (group: GroupName) => {
+  // Handle Group Selection with PIN protection
+  const handleSelectGroup = (group: string) => {
     if (group === "Kelompok 4" && !isVerifiedK4) {
+      setTargetRoleForPin("K4");
+      setIsGuruNameStep(false);
       setPendingAction({ type: "selectGroup", groupName: group });
       setPinInput("");
       setPinError(null);
       setIsPinModalOpen(true);
       return;
     }
+
+    if (group === "Guru / Pengajar" && !isVerifiedGuru) {
+      setTargetRoleForPin("Guru");
+      setIsGuruNameStep(false);
+      setPendingAction({ type: "selectGroup", groupName: group });
+      setPinInput("");
+      setPinError(null);
+      setTempGuruName("");
+      setIsPinModalOpen(true);
+      return;
+    }
+
+    if (group === "Guru / Pengajar" && isVerifiedGuru) {
+      setSelectedGroup(`Guru - ${guruName}`);
+      return;
+    }
+
     setSelectedGroup(group);
   };
 
@@ -182,32 +210,70 @@ export default function Discussion() {
   };
 
   const verifyPinCode = (pinToTest: string) => {
-    if (pinToTest === CORRECT_K4_PIN) {
-      setIsVerifiedK4(true);
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("k4_authenticated", "true");
-      }
-      setIsPinModalOpen(false);
-      setPinInput("");
-      setPinError(null);
+    if (targetRoleForPin === "K4") {
+      if (pinToTest === CORRECT_K4_PIN) {
+        setIsVerifiedK4(true);
+        setIsPinModalOpen(false);
+        setPinInput("");
+        setPinError(null);
 
-      if (pendingAction?.type === "selectGroup" && pendingAction.groupName) {
-        setSelectedGroup(pendingAction.groupName);
-      } else if (pendingAction?.type === "reply" && pendingAction.parentCommentId) {
-        setReplyingToId(pendingAction.parentCommentId);
-        setReplyGroup("Kelompok 4");
-      }
-      setPendingAction(null);
+        if (pendingAction?.type === "selectGroup" && pendingAction.groupName) {
+          setSelectedGroup(pendingAction.groupName);
+        } else if (pendingAction?.type === "reply" && pendingAction.parentCommentId) {
+          setReplyingToId(pendingAction.parentCommentId);
+          setReplyGroup("Kelompok 4");
+        }
+        setPendingAction(null);
 
-      setStatusMessage({
-        type: "success",
-        text: "👑 Verifikasi Kelompok 4 Berhasil! Akses Penulis dibuka.",
-      });
-      setTimeout(() => setStatusMessage(null), 3000);
-    } else {
-      setPinError("PIN Kelompok 4 Salah! Coba lagi.");
-      setPinInput("");
+        setStatusMessage({
+          type: "success",
+          text: "👑 Verifikasi Kelompok 4 Berhasil! Akses Penulis dibuka.",
+        });
+        setTimeout(() => setStatusMessage(null), 3000);
+      } else {
+        setPinError("PIN Kelompok 4 Salah! Coba lagi.");
+        setPinInput("");
+      }
+    } else if (targetRoleForPin === "Guru") {
+      if (pinToTest === CORRECT_GURU_PIN) {
+        setIsGuruNameStep(true);
+        setPinError(null);
+        setPinInput("");
+      } else {
+        setPinError("PIN Guru Salah! (010101)");
+        setPinInput("");
+      }
     }
+  };
+
+  const handleGuruNameSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tempGuruName.trim()) return;
+
+    const formattedName = tempGuruName.trim();
+    setGuruName(formattedName);
+    setIsVerifiedGuru(true);
+    setIsPinModalOpen(false);
+    setIsGuruNameStep(false);
+    setPinInput("");
+    setPinError(null);
+
+    const fullGuruIdentity = `Guru - ${formattedName}`;
+
+    if (pendingAction?.type === "selectGroup") {
+      setSelectedGroup(fullGuruIdentity);
+    } else if (pendingAction?.type === "reply" && pendingAction.parentCommentId) {
+      setReplyingToId(pendingAction.parentCommentId);
+      setReplyGroup(fullGuruIdentity);
+    }
+
+    setPendingAction(null);
+
+    setStatusMessage({
+      type: "success",
+      text: `🎓 Verifikasi Guru (${formattedName}) Berhasil!`,
+    });
+    setTimeout(() => setStatusMessage(null), 3000);
   };
 
   // Main Form Submit
@@ -216,6 +282,7 @@ export default function Discussion() {
     setStatusMessage(null);
 
     if (selectedGroup === "Kelompok 4" && !isVerifiedK4) {
+      setTargetRoleForPin("K4");
       setPendingAction({ type: "selectGroup", groupName: "Kelompok 4" });
       setIsPinModalOpen(true);
       return;
@@ -233,7 +300,7 @@ export default function Discussion() {
           group_name: selectedGroup,
           content: content.trim(),
           category: selectedCategory,
-          is_official: selectedGroup === "Kelompok 4",
+          is_official: selectedGroup === "Kelompok 4" || selectedGroup.startsWith("Guru"),
         }),
       });
 
@@ -247,7 +314,7 @@ export default function Discussion() {
         const commentWithDetails = {
           ...json.data,
           category: selectedCategory,
-          is_official: selectedGroup === "Kelompok 4",
+          is_official: selectedGroup === "Kelompok 4" || selectedGroup.startsWith("Guru"),
         };
         setComments((prev) => {
           if (prev.some((c) => c.id === commentWithDetails.id)) return prev;
@@ -279,6 +346,7 @@ export default function Discussion() {
     if (!replyContent.trim()) return;
 
     if (replyGroup === "Kelompok 4" && !isVerifiedK4) {
+      setTargetRoleForPin("K4");
       setPendingAction({ type: "reply", parentCommentId: parentId });
       setIsPinModalOpen(true);
       return;
@@ -295,7 +363,7 @@ export default function Discussion() {
           content: replyContent.trim(),
           category: "Tanggapan Kelompok",
           parent_id: parentId,
-          is_official: replyGroup === "Kelompok 4",
+          is_official: replyGroup === "Kelompok 4" || replyGroup.startsWith("Guru"),
         }),
       });
 
@@ -310,7 +378,7 @@ export default function Discussion() {
           ...json.data,
           category: "Tanggapan Kelompok",
           parent_id: parentId,
-          is_official: replyGroup === "Kelompok 4",
+          is_official: replyGroup === "Kelompok 4" || replyGroup.startsWith("Guru"),
         };
         setComments((prev) => {
           if (prev.some((c) => c.id === newReply.id)) return prev;
@@ -336,6 +404,10 @@ export default function Discussion() {
   };
 
   const getGroupBadgeColor = (group: string) => {
+    if (group.startsWith("Guru")) {
+      return "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-300 border-emerald-400 dark:border-emerald-700 font-extrabold shadow-2xs";
+    }
+
     switch (group) {
       case "Kelompok 1":
         return "bg-sky-50 text-sky-700 dark:bg-blue-950/80 dark:text-cyan-300 border-sky-200 dark:border-blue-800";
@@ -441,7 +513,7 @@ export default function Discussion() {
                 <span>{sortOrder === "newest" ? "Terbaru" : "Terlama"}</span>
               </button>
 
-              {/* Status Verified Kelompok 4 Indicator & Lock Button */}
+              {/* Status Verified Kelompok 4 Indicator */}
               {isVerifiedK4 && (
                 <div className="flex items-center gap-1.5">
                   <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-600 dark:text-amber-300 text-[11px] font-extrabold">
@@ -462,7 +534,34 @@ export default function Discussion() {
                     }}
                     className="px-2 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:hover:bg-rose-900 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-[10px] font-bold cursor-pointer transition-all"
                   >
-                    Kunci PIN 🔒
+                    Kunci K4 🔒
+                  </button>
+                </div>
+              )}
+
+              {/* Status Verified Guru Indicator */}
+              {isVerifiedGuru && (
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-extrabold">
+                    <GraduationCap className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Guru: {guruName}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsVerifiedGuru(false);
+                      setGuruName("");
+                      setSelectedGroup("Kelompok 1");
+                      setReplyGroup("Kelompok 1");
+                      setStatusMessage({
+                        type: "success",
+                        text: "🔒 Sesi Guru telah dikunci kembali.",
+                      });
+                      setTimeout(() => setStatusMessage(null), 3000);
+                    }}
+                    className="px-2 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:hover:bg-rose-900 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-[10px] font-bold cursor-pointer transition-all"
+                  >
+                    Kunci Guru 🔒
                   </button>
                 </div>
               )}
@@ -475,7 +574,7 @@ export default function Discussion() {
               {/* Custom Group Dropdown */}
               <div className="sm:col-span-4 space-y-1 relative">
                 <label className="block text-xs font-bold text-slate-700 dark:text-purple-300 uppercase tracking-wider">
-                  Identitas Kelompok:
+                  Identitas Komentator:
                 </label>
                 <button
                   type="button"
@@ -487,7 +586,11 @@ export default function Discussion() {
                 >
                   <span className="flex items-center gap-2">
                     <span className={`px-2 py-0.5 rounded-md text-xs border ${getGroupBadgeColor(selectedGroup)}`}>
-                      {selectedGroup === "Kelompok 4" ? "👑 Kelompok 4 (Penulis)" : `👥 ${selectedGroup}`}
+                      {selectedGroup.startsWith("Guru")
+                        ? `🎓 ${selectedGroup}`
+                        : selectedGroup === "Kelompok 4"
+                        ? "👑 Kelompok 4 (Penulis)"
+                        : `👥 ${selectedGroup}`}
                     </span>
                   </span>
                   <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${isGroupDropdownOpen ? "rotate-180" : ""}`} />
@@ -504,8 +607,10 @@ export default function Discussion() {
                       className="absolute left-0 right-0 top-full mt-1.5 z-30 p-2 rounded-2xl bg-white/95 dark:bg-[#120926]/95 backdrop-blur-2xl border border-slate-200 dark:border-purple-800 shadow-xl space-y-1"
                     >
                       {AVAILABLE_GROUPS.map((g) => {
-                        const isSelected = g === selectedGroup;
+                        const isSelected = selectedGroup === g || selectedGroup.startsWith("Guru") && g === "Guru / Pengajar";
                         const isK4 = g === "Kelompok 4";
+                        const isGuru = g === "Guru / Pengajar";
+
                         return (
                           <div
                             key={g}
@@ -521,7 +626,11 @@ export default function Discussion() {
                           >
                             <div className="flex items-center gap-2">
                               <span className={`px-2 py-0.5 rounded-md border text-[11px] ${getGroupBadgeColor(g)}`}>
-                                {isK4 ? "👑 Kelompok 4 (Penulis - Terkunci 🔑)" : g}
+                                {isK4
+                                  ? (isVerifiedK4 ? "👑 Kelompok 4 (Penulis)" : "👑 Kelompok 4 (PIN 🔑)")
+                                  : isGuru
+                                  ? (isVerifiedGuru ? `🎓 Guru - ${guruName}` : "🎓 Guru / Pengajar (PIN 🔑)")
+                                  : g}
                               </span>
                             </div>
                             {isSelected && <CheckCircle2 className="w-4 h-4 text-sky-500 dark:text-purple-400" />}
@@ -678,7 +787,7 @@ export default function Discussion() {
                 ) : (
                   <>
                     <Send className="w-3.5 h-3.5" />
-                    <span>Kirim Komentar Kelompok</span>
+                    <span>Kirim Komentar</span>
                   </>
                 )}
               </button>
@@ -716,7 +825,7 @@ export default function Discussion() {
                   Belum ada komentar pada kategori ini.
                 </p>
                 <p className="text-[11px] text-slate-400">
-                  Jadilah kelompok pertama yang mengirimkan analisis!
+                  Jadilah yang pertama mengirimkan analisis!
                 </p>
               </div>
             ) : (
@@ -725,6 +834,8 @@ export default function Discussion() {
                   {sortedTopLevelComments.map((comment) => {
                     const childReplies = comments.filter((c) => c.parent_id === comment.id);
                     const isReplyingThis = replyingToId === comment.id;
+
+                    const isGuruComment = comment.group_name.startsWith("Guru");
 
                     return (
                       <motion.div
@@ -743,7 +854,11 @@ export default function Discussion() {
                                 comment.group_name
                               )}`}
                             >
-                              {comment.group_name === "Kelompok 4" ? "👑 Kelompok 4 (Penulis)" : comment.group_name}
+                              {isGuruComment
+                                ? `🎓 ${comment.group_name}`
+                                : comment.group_name === "Kelompok 4"
+                                ? "👑 Kelompok 4 (Penulis)"
+                                : comment.group_name}
                             </span>
                             {comment.category && (
                               <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-purple-950/60 text-slate-600 dark:text-purple-300 font-medium border border-slate-200 dark:border-purple-800/40">
@@ -753,7 +868,7 @@ export default function Discussion() {
                             {comment.is_official && (
                               <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 font-black uppercase border border-amber-500/30 flex items-center gap-1">
                                 <Crown className="w-2.5 h-2.5 text-amber-500" />
-                                Penulis Resmi
+                                Resmi
                               </span>
                             )}
                           </div>
@@ -778,7 +893,7 @@ export default function Discussion() {
                                 setReplyingToId(null);
                               } else {
                                 setReplyingToId(comment.id);
-                                if (!isVerifiedK4) {
+                                if (!isVerifiedK4 && !isVerifiedGuru) {
                                   setReplyGroup("Kelompok 1");
                                 }
                               }
@@ -817,7 +932,9 @@ export default function Discussion() {
                                   className="flex items-center gap-1.5 px-3 py-1 rounded-xl glass-input text-xs font-bold text-slate-900 dark:text-white cursor-pointer shadow-2xs border border-slate-200 dark:border-purple-800"
                                 >
                                   <span className={`px-2 py-0.5 rounded-md text-[11px] border ${getGroupBadgeColor(replyGroup)}`}>
-                                    {replyGroup === "Kelompok 4"
+                                    {replyGroup.startsWith("Guru")
+                                      ? `🎓 ${replyGroup}`
+                                      : replyGroup === "Kelompok 4"
                                       ? (isVerifiedK4 ? "👑 Kelompok 4 (Penulis)" : "👑 Kelompok 4 (PIN 🔑)")
                                       : `👥 ${replyGroup}`}
                                   </span>
@@ -831,18 +948,34 @@ export default function Discussion() {
                                       animate={{ opacity: 1, y: 0, scale: 1 }}
                                       exit={{ opacity: 0, y: -4, scale: 0.98 }}
                                       transition={{ duration: 0.15 }}
-                                      className="absolute right-0 top-full mt-1.5 z-40 p-1.5 rounded-xl bg-white/95 dark:bg-[#120926]/95 backdrop-blur-2xl border border-slate-200 dark:border-purple-800 shadow-2xl space-y-1 w-60"
+                                      className="absolute right-0 top-full mt-1.5 z-40 p-1.5 rounded-xl bg-white/95 dark:bg-[#120926]/95 backdrop-blur-2xl border border-slate-200 dark:border-purple-800 shadow-2xl space-y-1 w-64"
                                     >
                                       {AVAILABLE_GROUPS.map((g) => {
-                                        const isSelected = replyGroup === g;
+                                        const isSelected = replyGroup === g || replyGroup.startsWith("Guru") && g === "Guru / Pengajar";
                                         const isK4 = g === "Kelompok 4";
+                                        const isGuru = g === "Guru / Pengajar";
+
                                         return (
                                           <div
                                             key={g}
                                             onClick={() => {
                                               if (isK4 && !isVerifiedK4) {
+                                                setTargetRoleForPin("K4");
+                                                setIsGuruNameStep(false);
                                                 setPendingAction({ type: "reply", parentCommentId: comment.id });
+                                                setPinInput("");
+                                                setPinError(null);
                                                 setIsPinModalOpen(true);
+                                              } else if (isGuru && !isVerifiedGuru) {
+                                                setTargetRoleForPin("Guru");
+                                                setIsGuruNameStep(false);
+                                                setPendingAction({ type: "reply", parentCommentId: comment.id });
+                                                setPinInput("");
+                                                setPinError(null);
+                                                setTempGuruName("");
+                                                setIsPinModalOpen(true);
+                                              } else if (isGuru && isVerifiedGuru) {
+                                                setReplyGroup(`Guru - ${guruName}`);
                                               } else {
                                                 setReplyGroup(g);
                                               }
@@ -855,7 +988,11 @@ export default function Discussion() {
                                             }`}
                                           >
                                             <span className={`px-2 py-0.5 rounded-md border text-[11px] ${getGroupBadgeColor(g)}`}>
-                                              {isK4 ? (isVerifiedK4 ? "👑 Kelompok 4 (Penulis)" : "👑 Kelompok 4 (PIN 🔑)") : g}
+                                              {isK4
+                                                ? (isVerifiedK4 ? "👑 Kelompok 4 (Penulis)" : "👑 Kelompok 4 (PIN 🔑)")
+                                                : isGuru
+                                                ? (isVerifiedGuru ? `🎓 Guru - ${guruName}` : "🎓 Guru / Pengajar (PIN 🔑)")
+                                                : g}
                                             </span>
                                             {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-sky-500 dark:text-purple-400" />}
                                           </div>
@@ -906,41 +1043,53 @@ export default function Discussion() {
                         {/* Nested Replies Stream */}
                         {childReplies.length > 0 && (
                           <div className="pt-2 pl-3 sm:pl-5 border-l-2 border-amber-400/40 dark:border-purple-800/60 space-y-2.5">
-                            {childReplies.map((reply) => (
-                              <div
-                                key={reply.id}
-                                className={`p-3 rounded-xl space-y-1.5 text-xs ${
-                                  reply.is_official || reply.group_name === "Kelompok 4"
-                                    ? "bg-amber-500/10 border border-amber-500/30 dark:bg-amber-950/40"
-                                    : "bg-slate-50 dark:bg-purple-950/50 border border-slate-200/60 dark:border-purple-900/30"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-1.5">
-                                    <span
-                                      className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${getGroupBadgeColor(
-                                        reply.group_name
-                                      )}`}
-                                    >
-                                      {reply.group_name === "Kelompok 4"
-                                        ? "👑 Kelompok 4 (Penulis)"
-                                        : reply.group_name}
-                                    </span>
-                                    {(reply.is_official || reply.group_name === "Kelompok 4") && (
-                                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500 text-white font-black uppercase shadow-2xs">
-                                        Jawaban Resmi
+                            {childReplies.map((reply) => {
+                              const isGuruReply = reply.group_name.startsWith("Guru");
+                              return (
+                                <div
+                                  key={reply.id}
+                                  className={`p-3 rounded-xl space-y-1.5 text-xs ${
+                                    isGuruReply
+                                      ? "bg-emerald-500/10 border border-emerald-500/30 dark:bg-emerald-950/40"
+                                      : reply.is_official || reply.group_name === "Kelompok 4"
+                                      ? "bg-amber-500/10 border border-amber-500/30 dark:bg-amber-950/40"
+                                      : "bg-slate-50 dark:bg-purple-950/50 border border-slate-200/60 dark:border-purple-900/30"
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1.5">
+                                      <span
+                                        className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${getGroupBadgeColor(
+                                          reply.group_name
+                                        )}`}
+                                      >
+                                        {isGuruReply
+                                          ? `🎓 ${reply.group_name}`
+                                          : reply.group_name === "Kelompok 4"
+                                          ? "👑 Kelompok 4 (Penulis)"
+                                          : reply.group_name}
                                       </span>
-                                    )}
+                                      {isGuruReply && (
+                                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500 text-white font-black uppercase shadow-2xs">
+                                          Tanggapan Guru
+                                        </span>
+                                      )}
+                                      {!isGuruReply && (reply.is_official || reply.group_name === "Kelompok 4") && (
+                                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500 text-white font-black uppercase shadow-2xs">
+                                          Jawaban Resmi
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="text-[9px] text-slate-400">
+                                      {formatDate(reply.created_at)}
+                                    </span>
                                   </div>
-                                  <span className="text-[9px] text-slate-400">
-                                    {formatDate(reply.created_at)}
-                                  </span>
+                                  <p className="text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                                    {reply.content}
+                                  </p>
                                 </div>
-                                <p className="text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
-                                  {reply.content}
-                                </p>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
                       </motion.div>
@@ -954,7 +1103,7 @@ export default function Discussion() {
         </div>
       </div>
 
-      {/* 🔒 PHONE KEYPAD PIN MODAL FOR KELOMPOK 4 VERIFICATION */}
+      {/* 🔒 PHONE KEYPAD PIN MODAL FOR KELOMPOK 4 & GURU VERIFICATION */}
       <AnimatePresence>
         {isPinModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md">
@@ -970,6 +1119,7 @@ export default function Discussion() {
                 type="button"
                 onClick={() => {
                   setIsPinModalOpen(false);
+                  setIsGuruNameStep(false);
                   setPendingAction(null);
                   setPinInput("");
                   setPinError(null);
@@ -979,99 +1129,163 @@ export default function Discussion() {
                 <X className="w-4 h-4" />
               </button>
 
-              {/* Modal Header */}
-              <div className="space-y-2 pt-2">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white mx-auto flex items-center justify-center shadow-lg shadow-amber-500/30">
-                  <KeyRound className="w-7 h-7" />
-                </div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">
-                  Otentikasi Kelompok 4
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-300">
-                  Masukkan 6-digit PIN rahasia pemilik untuk mendapatkan akses 👑 Penulis Resmi:
-                </p>
-              </div>
+              {/* Step 1: PIN Entry */}
+              {!isGuruNameStep ? (
+                <>
+                  {/* Modal Header */}
+                  <div className="space-y-2 pt-2">
+                    <div className={`w-14 h-14 rounded-2xl text-white mx-auto flex items-center justify-center shadow-lg ${
+                      targetRoleForPin === "Guru"
+                        ? "bg-gradient-to-tr from-emerald-500 to-teal-600 shadow-emerald-500/30"
+                        : "bg-gradient-to-tr from-amber-500 to-orange-500 shadow-amber-500/30"
+                    }`}>
+                      {targetRoleForPin === "Guru" ? (
+                        <GraduationCap className="w-7 h-7" />
+                      ) : (
+                        <KeyRound className="w-7 h-7" />
+                      )}
+                    </div>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                      {targetRoleForPin === "Guru"
+                        ? "Otentikasi Guru / Pengajar"
+                        : "Otentikasi Kelompok 4"}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-300">
+                      {targetRoleForPin === "Guru"
+                        ? "Masukkan 6-digit PIN khusus Guru (010101):"
+                        : "Masukkan 6-digit PIN rahasia pemilik (040404):"}
+                    </p>
+                  </div>
 
-              {/* 6 PIN Indicator Dots */}
-              <div className="flex justify-center gap-3 py-2">
-                {[0, 1, 2, 3, 4, 5].map((idx) => {
-                  const isFilled = pinInput.length > idx;
-                  return (
+                  {/* 6 PIN Indicator Dots */}
+                  <div className="flex justify-center gap-3 py-2">
+                    {[0, 1, 2, 3, 4, 5].map((idx) => {
+                      const isFilled = pinInput.length > idx;
+                      return (
+                        <motion.div
+                          key={idx}
+                          animate={isFilled ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+                          transition={{ duration: 0.15 }}
+                          className={`w-4 h-4 rounded-full border-2 transition-all ${
+                            isFilled
+                              ? targetRoleForPin === "Guru"
+                                ? "bg-emerald-500 border-emerald-500 shadow-md shadow-emerald-500/50"
+                                : "bg-amber-500 border-amber-500 shadow-md shadow-amber-500/50"
+                              : "border-slate-300 dark:border-purple-800 bg-transparent"
+                          }`}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  {/* PIN Error Alert */}
+                  {pinError && (
                     <motion.div
-                      key={idx}
-                      animate={isFilled ? { scale: [1, 1.2, 1] } : { scale: 1 }}
-                      transition={{ duration: 0.15 }}
-                      className={`w-4 h-4 rounded-full border-2 transition-all ${
-                        isFilled
-                          ? "bg-amber-500 border-amber-500 shadow-md shadow-amber-500/50"
-                          : "border-slate-300 dark:border-purple-800 bg-transparent"
-                      }`}
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold"
+                    >
+                      {pinError}
+                    </motion.div>
+                  )}
+
+                  {/* 3x4 Phone Keypad */}
+                  <div className="grid grid-cols-3 gap-3 max-w-[240px] mx-auto pt-1">
+                    {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => handlePinKeyPress(num)}
+                        className="w-16 h-16 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-purple-950/80 dark:hover:bg-purple-900 text-slate-900 dark:text-white font-extrabold text-xl flex items-center justify-center border border-slate-200/80 dark:border-purple-800/60 shadow-xs cursor-pointer active:scale-90 transition-transform"
+                      >
+                        {num}
+                      </button>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={handlePinClear}
+                      className="w-16 h-16 rounded-full bg-slate-100 dark:bg-purple-950/40 text-slate-400 hover:text-slate-700 dark:hover:text-white font-bold text-xs flex items-center justify-center border border-transparent cursor-pointer active:scale-90"
+                    >
+                      RESET
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handlePinKeyPress("0")}
+                      className="w-16 h-16 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-purple-950/80 dark:hover:bg-purple-900 text-slate-900 dark:text-white font-extrabold text-xl flex items-center justify-center border border-slate-200/80 dark:border-purple-800/60 shadow-xs cursor-pointer active:scale-90 transition-transform"
+                    >
+                      0
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handlePinDelete}
+                      className="w-16 h-16 rounded-full bg-slate-100 dark:bg-purple-950/40 text-slate-500 dark:text-purple-300 font-bold flex items-center justify-center border border-transparent cursor-pointer active:scale-90"
+                    >
+                      <Delete className="w-5 h-5" />
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* Step 2: Guru Name Input Form */
+                <form onSubmit={handleGuruNameSave} className="space-y-4 pt-2">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white mx-auto flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                    <GraduationCap className="w-7 h-7" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white">
+                      Identitas Nama Guru
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-300">
+                      PIN `010101` Benar! Masukkan nama Bapak/Ibu Guru:
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 text-left pt-2">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-purple-300">
+                      Nama Lengkap / Gelar Guru:
+                    </label>
+                    <input
+                      type="text"
+                      value={tempGuruName}
+                      onChange={(e) => setTempGuruName(e.target.value)}
+                      placeholder="Contoh: Pak Ahmad, S.Pd. / Bu Siti"
+                      autoFocus
+                      required
+                      className="w-full glass-input px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-900 dark:text-white border border-slate-200 dark:border-purple-800"
                     />
-                  );
-                })}
-              </div>
+                    <p className="text-[10px] text-slate-400">
+                      Format komentar: <strong className="text-emerald-600 dark:text-emerald-400">Guru - {tempGuruName.trim() || "[Nama]"}</strong>
+                    </p>
+                  </div>
 
-              {/* PIN Error Alert */}
-              {pinError && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold"
-                >
-                  {pinError}
-                </motion.div>
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={!tempGuruName.trim()}
+                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-xs sm:text-sm shadow-md disabled:opacity-50 cursor-pointer"
+                    >
+                      Simpan &amp; Lanjutkan 🎓
+                    </button>
+                  </div>
+                </form>
               )}
-
-              {/* 3x4 Phone Keypad */}
-              <div className="grid grid-cols-3 gap-3 max-w-[240px] mx-auto pt-1">
-                {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
-                  <button
-                    key={num}
-                    type="button"
-                    onClick={() => handlePinKeyPress(num)}
-                    className="w-16 h-16 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-purple-950/80 dark:hover:bg-purple-900 text-slate-900 dark:text-white font-extrabold text-xl flex items-center justify-center border border-slate-200/80 dark:border-purple-800/60 shadow-xs cursor-pointer active:scale-90 transition-transform"
-                  >
-                    {num}
-                  </button>
-                ))}
-
-                <button
-                  type="button"
-                  onClick={handlePinClear}
-                  className="w-16 h-16 rounded-full bg-slate-100 dark:bg-purple-950/40 text-slate-400 hover:text-slate-700 dark:hover:text-white font-bold text-xs flex items-center justify-center border border-transparent cursor-pointer active:scale-90"
-                >
-                  RESET
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handlePinKeyPress("0")}
-                  className="w-16 h-16 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-purple-950/80 dark:hover:bg-purple-900 text-slate-900 dark:text-white font-extrabold text-xl flex items-center justify-center border border-slate-200/80 dark:border-purple-800/60 shadow-xs cursor-pointer active:scale-90 transition-transform"
-                >
-                  0
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handlePinDelete}
-                  className="w-16 h-16 rounded-full bg-slate-100 dark:bg-purple-950/40 text-slate-500 dark:text-purple-300 font-bold flex items-center justify-center border border-transparent cursor-pointer active:scale-90"
-                >
-                  <Delete className="w-5 h-5" />
-                </button>
-              </div>
 
               <div className="pt-2">
                 <button
                   type="button"
                   onClick={() => {
                     setIsPinModalOpen(false);
+                    setIsGuruNameStep(false);
                     setPendingAction(null);
                     setPinInput("");
                     setPinError(null);
                   }}
                   className="text-xs font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                 >
-                  Batal &amp; Kembali ke Diskusi Umumm
+                  Batal &amp; Kembali ke Forum
                 </button>
               </div>
             </motion.div>

@@ -118,7 +118,8 @@ export type GroupName =
   | "Kelompok 3"
   | "Kelompok 4"
   | "Kelompok 5"
-  | "Kelompok 6";
+  | "Kelompok 6"
+  | "Guru / Pengajar";
 
 export const AVAILABLE_GROUPS: GroupName[] = [
   "Kelompok 1",
@@ -127,6 +128,7 @@ export const AVAILABLE_GROUPS: GroupName[] = [
   "Kelompok 4",
   "Kelompok 5",
   "Kelompok 6",
+  "Guru / Pengajar",
 ];
 
 export const DISCUSSION_CATEGORIES = [
